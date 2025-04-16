@@ -1,0 +1,17 @@
+{
+  "name": "windows-mdm-app",
+  "version": "1.0.0",
+  "description": "Windows MDM App",
+  "license": "MIT",
+  "author": {
+    "name": "Prince Kushwaha",
+    "email": "prince.kushwaha@pw.live"
+  },
+  "main": "./dist/main/main.js",
+  "scripts": {
+    "rebuild": "node -r ts-node/register ../../.erb/scripts/electron-rebuild.js",
+    "postinstall": "npm run rebuild && npm run link-modules",
+    "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
+  },
+  "dependencies": {}
+}

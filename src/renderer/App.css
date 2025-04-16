@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+:root {
+    --color-primary: #3B60D1;
+    --color-background: #ffffff;
+    --color-dashboard-background: #F8F8F8;
+    --color-text: #1B2124;
+    --color-input-border: #B7B7B7;
+    --color-disabled: #A1A3A4;
+    --color-usb-card: #FCF3EC;
+    --color-video-call-card: #D8E8FA;
+    --color-video-call-card-hover: #3E9BFF;
+    --color-usb-card-hover: #FF9C55;
+    --color-stroke-dark: #757575;
+    --color-stroke-light: #D9DCE1;
+    --color-body-text: #3D3D3D;
+    --color-success: #1B7938;
+    --color-success-light: #2BBC5933;
+    --color-pending: #F08C21;
+    --color-pending-light: var(--color-usb-card);
+    --color-failure: #D32F2F;
+    --color-failure-light: #ea4e427c;
+}
+
+.theme-dark {
+    --color-primary: #3b82f6;
+    --color-background: #1f2937;
+    --color-text: #f9fafb;
+    --color-input-border: #B7B7B7;
+    --color-disabled: #A1A3A4;
+}
+
+.theme-light {
+    --color-primary: #3B60D1;
+    --color-background: #ffffff;
+    --color-dashboard-background: #F8F8F8;
+    --color-text: #1B2124;
+    --color-input-border: #B7B7B7;
+    --color-disabled: #A1A3A4;
+    --color-usb-card: #FCF3EC;
+    --color-video-call-card: #D8E8FA;
+    --color-video-call-card-hover: #3E9BFF;
+    --color-usb-card-hover: #FF9C55;
+    --color-stroke-dark: #757575;
+    --color-stroke-light: #D9DCE1;
+    --color-body-text: #3D3D3D;
+    --color-success: #1B7938;
+    --color-success-light: #2BBC5933;
+    --color-pending: #F08C21;
+    --color-pending-light: var(--color-usb-card);
+    --color-failure: #D32F2F;
+    --color-failure-light: #ea4e427c;
+}
