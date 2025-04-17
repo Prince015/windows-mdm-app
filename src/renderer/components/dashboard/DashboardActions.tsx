@@ -1,4 +1,3 @@
-import React from 'react'
 import DashboardUsbRequestBox from './DashboardUsbRequestBox'
 import DashboardVideoCallRequest from './DashboardVideoCallRequest'
 import DashboardAppRequest from './DashboardAppRequest'

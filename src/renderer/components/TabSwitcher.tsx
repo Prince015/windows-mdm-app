@@ -21,7 +21,7 @@ const TabSwitcher: React.FC<TabSwitcherProps> = ({
     };
 
     return (
-        <div className={`relative min-w-fit flex rounded-lg items-center p-1.5 bg-dashboard-background ${containerClassName}`}>
+        <div className={`min-w-fit flex rounded-lg items-center p-1.5 bg-dashboard-background ${containerClassName}`}>
             <ul className="flex w-full items-center relative ">
                 {tabs.map((tab, index) => (
                     <li

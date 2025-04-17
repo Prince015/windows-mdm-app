@@ -5,6 +5,7 @@
 
 :root {
     --color-primary: #3B60D1;
+    --color-accent: #005FB8;
     --color-background: #ffffff;
     --color-dashboard-background: #F8F8F8;
     --color-text: #1B2124;
@@ -35,6 +36,7 @@
 
 .theme-light {
     --color-primary: #3B60D1;
+    --color-accent: #005FB8;
     --color-background: #ffffff;
     --color-dashboard-background: #F8F8F8;
     --color-text: #1B2124;

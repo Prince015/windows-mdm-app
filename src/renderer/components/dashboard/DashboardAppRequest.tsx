@@ -3,6 +3,7 @@ import { DashboardAppRequestInterface } from '../../interfaces/dashboard.interfa
 import instagramIcon from "../../../../assets/icons/instagram.svg"
 import telegramIcon from "../../../../assets/icons/telegram.svg"
 import bgmiIcon from "../../../../assets/icons/bgmi.svg"
+import appRequestEmptyIcon from "../../../../assets/icons/app_request_empty.svg"
 import DashboardAppRequestBox from './DashboardAppRequestBox';
 
 function DashboardAppRequest() {
@@ -10,7 +11,7 @@ function DashboardAppRequest() {
     <div className="rounded-2xl mt-4 flex-1 py-4 bg-dashboard-background border border-stroke-light h-full overflow-hidden flex flex-col">
       <p className="font-bold text-text mb-3 px-4">App Requests</p>
       <div className="flex flex-col gap-2 overflow-y-auto flex-1 px-4">
-        {appRequestData.map((item, index) => (
+        {appRequestData.length ? appRequestData.map((item, index) => (
           <DashboardAppRequestBox
             key={index}
             title={item.title}
@@ -18,7 +19,13 @@ function DashboardAppRequest() {
             date={item.date}
             icon={item.icon}
           />
-        ))}
+        ))
+          :
+          <div className='max-w-72 mx-auto'>
+            <img className='max-h-60' src={appRequestEmptyIcon} alt="" />
+            <p className='text-center text-sm mt-5'>There are currently no app requests. Your app requests will appear here</p>
+          </div>
+        }
       </div>
     </div>
   )

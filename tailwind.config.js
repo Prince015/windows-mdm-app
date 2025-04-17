@@ -5,6 +5,7 @@ module.exports = {
     extend: {
       colors: {
         primary: 'var(--color-primary)',
+        accent: 'var(--color-accent)',
         background: 'var(--color-background)',
         "dashboard-background": 'var(--color-dashboard-background)',
         text: 'var(--color-text)',
