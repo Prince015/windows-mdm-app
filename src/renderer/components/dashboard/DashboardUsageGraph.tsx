@@ -1,86 +1,80 @@
 import { useMemo } from "react";
 import Chart from "../Chart";
-import { generateRandomColor } from "../../utils/helper";
-import { formatTimeDisplay } from "../../utils/date-fromats";
-import { DashboardData, UsageData } from "../../interfaces/dashboard.interface";
+import { formatDurationSmart, formatTimeDisplay, secondsToHours } from "../../utils/date-fromats";
+import { PiTrendDownBold, PiTrendUpBold } from "react-icons/pi";
 
-const calculateAverageUsage = (categories: UsageData[], days: string[]): number => {
-  const activeCategories = categories.filter(cat => cat.category !== 'Remaining');
-  const dailyTotals = days.map((_, dayIndex) => {
-    return activeCategories.reduce((sum, category) => sum + category.data[dayIndex], 0);
-  });
+interface DashboardUsageGraphProps {
+  days: string[];
+  data: number[];
+  dailyAvgUsage: number;
+  previousDailyAvgUsage: number;
+}
 
-  return dailyTotals.reduce((sum, val) => sum + val, 0) / dailyTotals.length;
-};
+function calculateWeeklyChange(current: number, previous: number): { percent: number; direction: 'up' | 'down' | 'neutral' } {
+  if (previous === 0) {
+    if (current === 0) {
+      return {
+        percent: 0,
+        direction: 'neutral',
+      };
+    }
+    return {
+      percent: 100,
+      direction: 'up',
+    };
+  }
 
-function DashboardUsageGraph() {
-  const categoriesWithColors = useMemo(() => {
-    return usageData.categories.map(category => ({
-      ...category,
-      color: category.color || generateRandomColor(),
-      displayTime: formatTimeDisplay(
-        category.data.reduce((sum, hours) => sum + hours, 0) / category.data.length
-      )
-    }));
-  }, []);
+  const change = ((current - previous) / previous) * 100;
+  return {
+    percent: Number(Math.abs(change).toFixed(2)),
+    direction: change >= 0 ? 'up' : 'down',
+  };
+}
 
-  const allCategories = useMemo(() => {
-    const MAX_HOURS_PER_DAY = 24;
+function DashboardUsageGraph({ days, data, dailyAvgUsage, previousDailyAvgUsage }: DashboardUsageGraphProps) {
+  const dataInHours = useMemo(() => data.map(seconds => secondsToHours(seconds)), [data]);
+  const dailyAvgUsageInHours = useMemo(() => secondsToHours(dailyAvgUsage), [dailyAvgUsage]);
 
-    const remainingData = usageData.days.map((_, dayIndex) => {
-      const usedHours = categoriesWithColors.reduce(
-        (total, category) => total + category.data[dayIndex],
-        0
-      );
-      return Math.max(0, MAX_HOURS_PER_DAY - usedHours);
-    });
-
-    return [
-      ...categoriesWithColors,
-      {
-        category: 'Remaining',
-        color: '#e5e7eb',
-        data: remainingData,
-        displayTime: ''
-      }
-    ];
-  }, [categoriesWithColors]);
-
-  const averageUsage = useMemo(() => {
-    const avg = calculateAverageUsage(categoriesWithColors, usageData.days);
-    return formatTimeDisplay(avg);
-  }, [categoriesWithColors]);
+  const maxUsage = useMemo(() => {
+    const maxDataValue = Math.max(...dataInHours);
+    if (maxDataValue < 1) {
+      return Math.ceil(maxDataValue * 2) / 2;
+    } else if (maxDataValue < 6) {
+      return Math.ceil(maxDataValue);
+    } else if (maxDataValue < 12) {
+      return 12;
+    }
+    return 24;
+  }, [dataInHours]);
 
   const chartSeries = useMemo(() => {
-    return allCategories.map(category => ({
-      name: category.category,
-      data: category.data
-    }));
-  }, [allCategories]);
+    return [{
+      name: 'Usage',
+      data: dataInHours
+    }];
+  }, [dataInHours]);
 
-  const fillColors = useMemo(() => {
-    return allCategories.map(category => category.color);
-  }, [allCategories]);
+  const remainingData = useMemo(() => {
+    console.log("Remaining Data: ", dataInHours, maxUsage);
+    return dataInHours.map(usage => Math.max(0, maxUsage - usage));
+  }, [dataInHours, maxUsage]);
 
-  const avgLineValue = useMemo(() => {
-    const activeCategories = categoriesWithColors;
-    const dailyTotals = usageData.days.map((_, dayIndex) => {
-      return activeCategories.reduce((sum, category) => sum + category.data[dayIndex], 0);
-    });
-
-    return dailyTotals.reduce((sum, val) => sum + val, 0) / dailyTotals.length;
-  }, [categoriesWithColors]);
+  const previousComparison = calculateWeeklyChange(dailyAvgUsage, previousDailyAvgUsage);
 
   return (
     <div className="mt-3">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-stroke-dark text-sm font-light">Daily Average</h2>
-          <h1 className="text-xl text-text font-semibold">{averageUsage}</h1>
+          <h1 className="text-xl text-text font-semibold">{formatDurationSmart(dailyAvgUsage * 1000)}</h1>
         </div>
-        <p className="text-sm">
-          {usageData.weeklyChange.direction === 'up' ? '🔺' : '🔻'}{' '}
-          <span className="text-text">{usageData.weeklyChange.percent}%</span>{' '}
+        <p className="text-sm align-middle">
+          {previousComparison.direction === 'up' ? (
+            <PiTrendUpBold className={`inline-block mr-2 text-green-500`} />
+          ) : previousComparison.direction === 'down' ? (
+            <PiTrendDownBold className={`inline-block mr-2 text-red-500`} />
+          ) : null}
+          <span className="text-text mr-2">{previousComparison.percent}%</span>
           <span className="text-stroke-dark">from last week</span>
         </p>
       </div>
@@ -96,7 +90,7 @@ function DashboardUsageGraph() {
           },
           grid: { show: false },
           xaxis: {
-            categories: usageData.days,
+            categories: days,
             labels: {
               style: { colors: '#718096', fontSize: '12px' }
             },
@@ -105,9 +99,9 @@ function DashboardUsageGraph() {
           },
           yaxis: {
             show: true,
-            max: 24,
+            max: maxUsage,
             min: 0,
-            stepSize: 24,
+            tickAmount: maxUsage <= 1 ? 2 : Math.min(6, maxUsage),
             labels: {
               formatter: (val) => {
                 return formatTimeDisplay(val);
@@ -117,7 +111,7 @@ function DashboardUsageGraph() {
           },
           legend: { show: false },
           fill: {
-            colors: fillColors,
+            colors: ['#3b82f6', '#e5e7eb'],
           },
           plotOptions: {
             bar: {
@@ -128,7 +122,7 @@ function DashboardUsageGraph() {
           annotations: {
             yaxis: [
               {
-                y: avgLineValue,
+                y: dailyAvgUsageInHours,
                 borderColor: '#a0aec0',
                 strokeDashArray: 5,
                 label: {
@@ -143,58 +137,31 @@ function DashboardUsageGraph() {
             ]
           },
         }}
-        series={chartSeries}
+        series={[
+          ...chartSeries,
+          {
+            name: 'Remaining',
+            data: remainingData
+          }
+        ]}
       />
 
       <div className="flex justify-between text-sm text-gray-700 px-2">
-        {allCategories
-          .filter(category => category.category !== 'Remaining')
-          .map((category, index) => (
-            <div key={index} className="">
-              <div className="flex items-center space-x-2">
-                <span
-                  className="w-3 h-3 rounded-sm"
-                  style={{ backgroundColor: category.color }}
-                />
-                <span>{category.category}</span>
-              </div>
-              <span className="text-gray-500">{category.displayTime}</span>
-            </div>
-          ))}
+        <div className="flex items-center space-x-2">
+          <span className="w-3 h-3 rounded-sm bg-blue-500" />
+          <span>Usage</span>
+          <span className="text-gray-500">{formatDurationSmart(dailyAvgUsage * 1000)}</span>
+        </div>
+        {maxUsage < 24 && (
+          <div className="flex items-center space-x-2">
+            <span className="w-3 h-3 rounded-sm bg-gray-200" />
+            <span>Available</span>
+            <span className="text-gray-500">{formatTimeDisplay(maxUsage)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export default DashboardUsageGraph;
-
-const usageData: DashboardData = {
-  days: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
-  categories: [
-    {
-      category: 'Learning',
-      data: [3.5, 2.8, 4.2, 3.9, 2.5, 3.2, 4.7],
-      displayTime: formatTimeDisplay(3.5)
-    },
-    {
-      category: 'Entertainment',
-      data: [1.2, 2.5, 1.8, 1.5, 2.0, 3.2, 2.5],
-      displayTime: formatTimeDisplay(2.1)
-    },
-    {
-      category: 'Games',
-      data: [0.8, 1.5, 0.5, 1.2, 2.3, 1.1, 3.2],
-      displayTime: formatTimeDisplay(1.5)
-    },
-    {
-      category: 'Work',
-      data: [6.5, 7.8, 8.2, 7.5, 7.3, 6.1, 0],
-      displayTime: formatTimeDisplay(6.2)
-    }
-  ],
-  dailyAverage: "12.5h",
-  weeklyChange: {
-    percent: 20,
-    direction: 'up'
-  }
-};

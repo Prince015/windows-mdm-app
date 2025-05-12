@@ -5,18 +5,25 @@ import durationIcon from '../../../../assets/icons/duration.svg';
 import DashboardStatBox from './DashboardStatBox';
 import { formatDurationSmart, formatTime } from '../../utils/date-fromats';
 
-function DashboardAppUsageStats() {
+interface DashboardAppUsageStatsProps {
+    highlight: {
+        app: string;
+        duration: number;
+    }[];
+}
+
+function DashboardAppUsageStats ({ highlight }: DashboardAppUsageStatsProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const itemWidth = 87;
-    const [visibleCount, setVisibleCount] = useState(appUsageData.length);
+    const [visibleCount, setVisibleCount] = useState(highlight.length);
 
     useEffect(() => {
         const updateVisibleCount = () => {
             if (containerRef.current) {
                 const containerWidth = containerRef.current.offsetWidth;
                 const maxVisible = Math.floor(containerWidth / itemWidth);
-                const needsPlusBadge = maxVisible < appUsageData.length;
-                const adjustedCount = needsPlusBadge ? maxVisible - 1 : appUsageData.length;
+                const needsPlusBadge = maxVisible < highlight.length;
+                const adjustedCount = needsPlusBadge ? maxVisible - 1 : highlight.length;
                 setVisibleCount(Math.max(0, adjustedCount));
             }
         };
@@ -28,20 +35,8 @@ function DashboardAppUsageStats() {
         return () => observer.disconnect();
     }, []);
 
-    const visibleApps = appUsageData.slice(0, visibleCount);
-    const hiddenCount = appUsageData.length - visibleCount;
-
-    const mostUsedApp = appUsageData.reduce((prev, current) =>
-        current.usageDuration > prev.usageDuration ? current : prev
-    ).appName;
-
-    const longestSession = formatDurationSmart(Math.max(...appUsageData.map(item => item.longestSessionDuration)))
-
-    const appWithLongestSession = appUsageData.reduce((prev, current) =>
-        current.longestSessionDuration > prev.longestSessionDuration ? current : prev
-    );
-
-    const activeHours = `${formatTime(appWithLongestSession.startTime)} to ${formatTime(appWithLongestSession.endTime)}`;
+    const visibleApps = highlight.slice(0, visibleCount);
+    const hiddenCount = highlight.length - visibleCount;
 
     return (
         <div className="rounded-2xl mt-4 p-4 border border-stroke-light">
@@ -49,8 +44,8 @@ function DashboardAppUsageStats() {
             <div ref={containerRef} className="flex items-center gap-6 mt-6 overflow-hidden ">
                 {visibleApps.map((item, index) => (
                     <div key={index} className="flex flex-col items-center bg-dashboard-background p-4 rounded-lg w-[64px]">
-                        <img src={item.appIcon} alt={item.appName} className="w-8 h-8" />
-                        <p className="text-xs font-semibold text-text mt-4">{(item.usageDuration / 3600000).toFixed(1)}h</p>
+                        <img src={item.app} alt={item.app} className="w-8 h-8" />
+                        <p className="text-xs font-semibold text-text mt-4">{(item.duration / 60).toFixed(1)}m</p>
                     </div>
                 ))}
                 {hiddenCount > 0 && (
@@ -59,11 +54,11 @@ function DashboardAppUsageStats() {
                     </div>
                 )}
             </div>
-            <div className='flex flex-wrap gap-y-3 gap-x-5 mt-6'>
+            {/* <div className='flex flex-wrap gap-y-3 gap-x-5 mt-6'>
                 <DashboardStatBox icon={recycleIcon} label="Most Used App" value={mostUsedApp} />
                 <DashboardStatBox icon={durationIcon} label="Longest Session" value={longestSession} />
                 <DashboardStatBox icon={durationIcon} label="Active Hours" value={activeHours} />
-            </div>
+            </div> */}
 
         </div>
     );

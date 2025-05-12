@@ -57,3 +57,6 @@ export const formatTimeDisplay = (hours: number): string => {
     }
 };
 
+export function secondsToHours(seconds: number): number {
+    return seconds / 3600; // 3600 seconds in an hour
+}
