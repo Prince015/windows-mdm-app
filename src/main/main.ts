@@ -16,6 +16,7 @@ import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 import ElectronStore from 'electron-store';
 import sqlite3 from 'sqlite3';
+import * as os from "os";
 
 class AppUpdater {
   constructor() {
@@ -130,121 +131,118 @@ ipcMain.on('electron-store-clear', async () => {
   electronStore?.clear(); // Clear all keys in the store
 });
 
-const DB_PATH = path.join('./data/usage.db');
-
+const desktopPath = path.join(os.homedir(), "Desktop")
+const DB_PATH = path.join(desktopPath, "MDM_SERVICE_DATA", 'usage.db');
 ipcMain.handle('get-usage-data', async (event, { mode }) => {
   const db = new sqlite3.Database(DB_PATH);
-
   const now = new Date();
-  const todayStr = now.toDateString();
 
-  let startDate = new Date(now);
-  let endDate = new Date(now);
-  let prevStartDate: Date;
-  let prevEndDate: Date;
+  const getDateKey = (date: Date) =>
+    date.toUTCString().split(' ').slice(0, 4).join(' ');
 
-  const isWeek = mode === 'This Week';
+  const getDateRange = (base: Date, daysBack: number = 0) => {
+    const date = new Date(base);
+    date.setUTCDate(date.getUTCDate() - daysBack);
+    const y = date.getUTCFullYear();
+    const m = date.getUTCMonth();
+    const d = date.getUTCDate();
+    return [
+      new Date(Date.UTC(y, m, d, 0, 1, 0)),
+      new Date(Date.UTC(y, m, d, 23, 59, 59, 999))
+    ];
+  };
 
-  if (isWeek) {
-    startDate.setDate(now.getDate() - now.getDay());
-    endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
+  let startDate: Date, endDate: Date, prevStartDate: Date, prevEndDate: Date;
 
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(startDate.getDate() - 7);
-    prevEndDate = new Date(prevStartDate);
-    prevEndDate.setDate(prevStartDate.getDate() + 6);
-  } else if (mode === 'Today') {
-    prevStartDate = new Date(now);
-    prevStartDate.setDate(prevStartDate.getDate() - 1);
-    prevEndDate = new Date(prevStartDate);
+  if (mode === 'Today') {
+    [startDate, endDate] = getDateRange(now);
+    [prevStartDate, prevEndDate] = getDateRange(now, 1);
+  } else if (mode === 'This Week') {
+    const start = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - now.getUTCDay(),
+      0, 1, 0
+    ));
+    const end = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - now.getUTCDay() + 6,
+      23, 59, 59, 999
+    ));
+    startDate = start;
+    endDate = end;
+    prevStartDate = new Date(start);
+    prevStartDate.setUTCDate(start.getUTCDate() - 7);
+    prevEndDate = new Date(end);
+    prevEndDate.setUTCDate(end.getUTCDate() - 7);
   } else {
     throw new Error('Invalid mode. Use "This Week" or "Today"');
   }
 
-  const currentFrom = startDate.toISOString();
-  const currentTo = endDate.toISOString();
-  const prevFrom = prevStartDate.toISOString();
-  const prevTo = prevEndDate.toISOString();
-
-  function fetchUsage(from: string, to: string): Promise<any[]> {
-    return new Promise((resolve, reject) => {
+  const fetchUsage = (from: string, to: string): Promise<any[]> =>
+    new Promise((resolve, reject) => {
       db.all(
         `SELECT timestamp, app_name, duration FROM app_usage WHERE timestamp BETWEEN ? AND ?`,
         [from, to],
-        (err, rows: any[]) => (err ? reject(err) : resolve(rows))
+        (err, rows) => (err ? reject(err) : resolve(rows))
       );
     });
-  }
 
   try {
     const [currentRows, previousRows] = await Promise.all([
-      fetchUsage(currentFrom, currentTo),
-      fetchUsage(prevFrom, prevTo)
+      fetchUsage(startDate.toISOString(), endDate.toISOString()),
+      fetchUsage(prevStartDate.toISOString(), prevEndDate.toISOString())
     ]);
 
     const dayWiseUsage: Record<string, number> = {};
-    const todayAppUsage: Record<string, number> = {};
+    const appUsage: Record<string, number> = {};
 
-    for (const row of currentRows) {
-      const date = new Date(row.timestamp);
-      const dateKey = date.toDateString();
-      dayWiseUsage[dateKey] = (dayWiseUsage[dateKey] || 0) + row.duration;
-
-      if (mode === 'Today' && dateKey === todayStr) {
-        todayAppUsage[row.app_name] = (todayAppUsage[row.app_name] || 0) + row.duration;
-      } else if (mode === 'This Week') {
-        todayAppUsage[row.app_name] = (todayAppUsage[row.app_name] || 0) + row.duration;
+    currentRows.forEach(({ timestamp, app_name, duration }) => {
+      const dateKey = getDateKey(new Date(timestamp));
+      dayWiseUsage[dateKey] = (dayWiseUsage[dateKey] || 0) + duration;
+      if (mode === 'This Week' || dateKey === getDateKey(now)) {
+        appUsage[app_name] = (appUsage[app_name] || 0) + duration;
       }
-    }
+    });
 
     const days: string[] = [];
     const data: number[] = [];
     let totalUsage = 0;
     let dayCount = 0;
 
-    const loopDate = new Date(startDate);
-    while (loopDate <= endDate) {
-      const dateKey = loopDate.toDateString();
+    for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dateKey = getDateKey(d);
       const usage = dayWiseUsage[dateKey] || 0;
-
-      if (loopDate <= now) {
+      if (d <= now) {
         totalUsage += usage;
         dayCount++;
       }
-
-      const dayName = loopDate.toLocaleDateString('en-US', { weekday: 'short' });
-      days.push(dayName);
+      days.push(d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }));
       data.push(usage);
-
-      loopDate.setDate(loopDate.getDate() + 1);
     }
 
-    const dailyAvgUsage = dayCount > 0 ? Number((totalUsage / dayCount).toFixed(2)) : 0;
+    const dailyAvgUsage = dayCount ? +(totalUsage / dayCount).toFixed(2) : 0;
 
-    const highlight = Object.entries(todayAppUsage)
+    const highlight = Object.entries(appUsage)
       .map(([app, duration]) => ({ app, duration }))
       .sort((a, b) => b.duration - a.duration);
 
     const prevDayWiseUsage: Record<string, number> = {};
-    for (const row of previousRows) {
-      const date = new Date(row.timestamp);
-      const dateKey = date.toDateString();
-      prevDayWiseUsage[dateKey] = (prevDayWiseUsage[dateKey] || 0) + row.duration;
-    }
+    previousRows.forEach(({ timestamp, duration }) => {
+      const dateKey = getDateKey(new Date(timestamp));
+      prevDayWiseUsage[dateKey] = (prevDayWiseUsage[dateKey] || 0) + duration;
+    });
 
     const prevData: number[] = [];
-    const loopPrev = new Date(prevStartDate);
-    while (loopPrev <= prevEndDate) {
-      const dateKey = loopPrev.toDateString();
+    for (let d = new Date(prevStartDate); d <= prevEndDate; d.setUTCDate(d.getUTCDate() + 1)) {
+      const dateKey = getDateKey(d);
       prevData.push(prevDayWiseUsage[dateKey] || 0);
-      loopPrev.setDate(loopPrev.getDate() + 1);
     }
 
-    const previousDailyAvg =
-      prevData.length > 0
-        ? Number((prevData.reduce((a, b) => a + b, 0) / prevData.length).toFixed(2))
-        : 0;
+    const previousDailyAvg = prevData.length
+      ? +(prevData.reduce((a, b) => a + b, 0) / prevData.length).toFixed(2)
+      : 0;
 
     return {
       days,

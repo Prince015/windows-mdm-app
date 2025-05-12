@@ -33,7 +33,7 @@ function DashboardAppUsageStats ({ highlight }: DashboardAppUsageStatsProps) {
         if (containerRef.current) observer.observe(containerRef.current);
 
         return () => observer.disconnect();
-    }, []);
+    }, [highlight]);
 
     const visibleApps = highlight.slice(0, visibleCount);
     const hiddenCount = highlight.length - visibleCount;
