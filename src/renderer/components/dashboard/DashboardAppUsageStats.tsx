@@ -9,6 +9,7 @@ interface DashboardAppUsageStatsProps {
     highlight: {
         app: string;
         duration: number;
+        app_icon: string;
     }[];
 }
 
@@ -44,7 +45,7 @@ function DashboardAppUsageStats ({ highlight }: DashboardAppUsageStatsProps) {
             <div ref={containerRef} className="flex items-center gap-6 mt-6 overflow-hidden ">
                 {visibleApps.map((item, index) => (
                     <div key={index} className="flex flex-col items-center bg-dashboard-background p-4 rounded-lg w-[64px]">
-                        <img src={item.app} alt={item.app} className="w-8 h-8" />
+                        <img src={item.app_icon} alt={item.app} className="w-8 h-8" />
                         <p className="text-xs font-semibold text-text mt-4">{(item.duration / 60).toFixed(1)}m</p>
                     </div>
                 ))}

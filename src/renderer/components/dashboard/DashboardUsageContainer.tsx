@@ -10,7 +10,7 @@ function DashboardUsageContainer() {
 
     const [days, setDays] = useState<string[]>([]);
     const [data, setData] = useState<number[]>([]);
-    const [highlight, setHighlight] = useState<{ app: string; duration: number }[]>([]);
+    const [highlight, setHighlight] = useState<{ app: string; duration: number, app_icon: string }[]>([]);
     const [dailyAvgUsage, setDailyAvgUsage] = useState(0);
     const [previousDailyAvgUsage, setPreviousDailyAvgUsage] = useState(0);
 

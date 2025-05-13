@@ -183,7 +183,7 @@ ipcMain.handle('get-usage-data', async (event, { mode }) => {
   const fetchUsage = (from: string, to: string): Promise<any[]> =>
     new Promise((resolve, reject) => {
       db.all(
-        `SELECT timestamp, app_name, duration FROM app_usage WHERE timestamp BETWEEN ? AND ?`,
+        `SELECT timestamp, app_name, duration, app_icon FROM app_usage WHERE timestamp BETWEEN ? AND ?`,
         [from, to],
         (err, rows) => (err ? reject(err) : resolve(rows))
       );
@@ -196,15 +196,20 @@ ipcMain.handle('get-usage-data', async (event, { mode }) => {
     ]);
 
     const dayWiseUsage: Record<string, number> = {};
-    const appUsage: Record<string, number> = {};
+    const appUsage: Record<string, { duration: number; app_icon: string }> = {};
 
-    currentRows.forEach(({ timestamp, app_name, duration }) => {
+
+    currentRows.forEach(({ timestamp, app_name, duration, app_icon }) => {
       const dateKey = getDateKey(new Date(timestamp));
       dayWiseUsage[dateKey] = (dayWiseUsage[dateKey] || 0) + duration;
       if (mode === 'This Week' || dateKey === getDateKey(now)) {
-        appUsage[app_name] = (appUsage[app_name] || 0) + duration;
+        appUsage[app_name] = {
+          duration: (appUsage[app_name]?.duration || 0) + duration,
+          app_icon: appUsage[app_name]?.app_icon || app_icon
+        };
       }
     });
+
 
     const days: string[] = [];
     const data: number[] = [];
@@ -225,8 +230,9 @@ ipcMain.handle('get-usage-data', async (event, { mode }) => {
     const dailyAvgUsage = dayCount ? +(totalUsage / dayCount).toFixed(2) : 0;
 
     const highlight = Object.entries(appUsage)
-      .map(([app, duration]) => ({ app, duration }))
+      .map(([app, { duration, app_icon }]) => ({ app, duration, app_icon }))
       .sort((a, b) => b.duration - a.duration);
+
 
     const prevDayWiseUsage: Record<string, number> = {};
     previousRows.forEach(({ timestamp, duration }) => {
